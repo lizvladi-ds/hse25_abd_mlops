@@ -1,0 +1,4 @@
+flask==3.0.0
+scikit-learn==1.5.1
+numpy==1.26.4
+psycopg2-binary==2.9.9
