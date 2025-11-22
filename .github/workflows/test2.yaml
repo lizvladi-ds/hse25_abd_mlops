@@ -1,0 +1,134 @@
+name: ML Service CI Pipeline
+
+on:
+  push:
+    branches:
+      - "test"
+  pull_request:
+    branches:
+      - "test"
+
+env:
+  PYTHON_VERSION: "3.10"
+  CACHE_VERSION: "1"
+  DOCKER_IMAGE: "ml-mini-project"
+  TEST_REPORT: "pytest-report.xml"
+
+jobs:
+
+  # ----------------------
+  # 1) LINT + TESTS (matrix)
+  # ----------------------
+  tests:
+    name: Test on Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python: [ "3.9", "3.10", "3.11" ]
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ matrix.python }}-${{ env.CACHE_VERSION }}
+          restore-keys: |
+            pip-${{ runner.os }}-${{ matrix.python }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-mock flake8
+
+      - name: Run lint
+        run: |
+          echo "Running flake8..."
+          flake8 . --exclude=venv --max-line-length=120
+
+      - name: Run tests
+        run: |
+          pytest -v --cov=app --cov-report=xml --junitxml=${{ env.TEST_REPORT }}
+
+      - name: Upload test report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.python }}
+          path: ${{ env.TEST_REPORT }}
+
+  # ----------------------
+  # 2) BUILD DOCKER IMAGE
+  # ----------------------
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: tests  # <-- critical dependency chain
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --file Dockerfile \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }} \
+            .
+
+      - name: Save Docker image artifact
+        run: |
+          docker save ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }} \
+            -o ml-mini-project.tar
+
+      - name: Upload Docker artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ml-mini-project.tar
+
+  # ----------------------
+  # 3) OPTIONAL: DEPLOY JOB (example)
+  # ----------------------
+  deploy:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    needs: build
+
+    if: github.ref == 'refs/heads/test'
+
+    env:
+      DEPLOY_ENV: "staging"
+      IMAGE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Show deploy context info
+        run: |
+          echo "Deploying using:"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch:     ${{ github.ref }}"
+          echo "Actor:      ${{ github.actor }}"
+          echo "Env:        ${{ env.DEPLOY_ENV }}"
+          echo "Image:      ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_SHA }}"
+
+      - name: Simulate deployment
+        run: |
+          echo "Pretending to deploy Docker image..."
+          echo "Deployed version: ${{ env.IMAGE_SHA }}"
