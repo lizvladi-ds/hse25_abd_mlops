@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "test" ]
 
+defaults:
+  run:
+    working-directory: ./webinar2_example3
+
 jobs:
   ci:
     name: Run lint, tests, build docker
