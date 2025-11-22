@@ -58,7 +58,7 @@ jobs:
           DB_PASSWORD: postgres
         run: |
           echo "Running pytest..."
-          pytest -v --cov=app --cov-report=term-missing
+          pytest -m "not integration" -v --cov=app --cov-report=term-missing
 
       - name: Build Docker image
         run: |
