@@ -7,6 +7,10 @@ on:
   pull_request:
     branches:
       - "test"
+      
+defaults:
+  run:
+    working-directory: ./webinar2_example3
 
 env:
   PYTHON_VERSION: "3.10"
