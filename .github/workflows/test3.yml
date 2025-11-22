@@ -184,26 +184,3 @@ jobs:
           name: docker-image
           path: ml-mini-project.tar
 
-  # 4) Deploy
-  deploy:
-    name: Deploy to staging
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/test'
-
-    env:
-      DEPLOY_ENV: "staging"
-      IMAGE_SHA: ${{ github.sha }}
-
-    steps:
-      - name: Show deploy context
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Branch:     ${{ github.ref }}"
-          echo "Actor:      ${{ github.actor }}"
-          echo "Env:        ${{ env.DEPLOY_ENV }}"
-          echo "Image:      ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_SHA }}"
-      - name: Simulate deployment
-        run: |
-          echo "Deploying image..."
-          echo "Done."
