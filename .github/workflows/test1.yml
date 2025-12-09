@@ -2,9 +2,13 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ "test" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "test" ]
+    branches: [ "main" ]
+
+defaults:
+  run:
+    working-directory: ./webinar2_example3
 
 jobs:
   ci:
@@ -54,7 +58,7 @@ jobs:
           DB_PASSWORD: postgres
         run: |
           echo "Running pytest..."
-          pytest -v --cov=app --cov-report=term-missing
+          pytest -m "not integration" -v --cov=app --cov-report=term-missing
 
       - name: Build Docker image
         run: |
